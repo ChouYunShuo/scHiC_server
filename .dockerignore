@@ -5,4 +5,5 @@ db.sqlite3
 __pycache__/
 *.py[cod]
 
-src/api/hic/data
+api/migrations
+api/hic/data

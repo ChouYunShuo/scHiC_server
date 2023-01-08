@@ -5,5 +5,5 @@ from django.utils import timezone
 
 class Dataset(models.Model):
     name = models.CharField(max_length=100)
-    file_path = models.Field()
+    file_path = models.TextField()
     create_time = models.DateTimeField(default=timezone.now)
