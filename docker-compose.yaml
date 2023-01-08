@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  web:
+    build:
+       context: ./src
+       dockerfile: dockerfile
+    image: hic_server:v1  
+    
+    env_file:
+      - src/ .env

@@ -1,9 +1,0 @@
-db.sqlite3
-.DS_Store
-.env
-
-__pycache__/
-*.py[cod]
-
-api/migrations
-api/hic/data
