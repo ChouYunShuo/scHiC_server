@@ -19,10 +19,10 @@ RUN python3 -m venv /opt/venv
 #install h5py wheel dependencies
 RUN apt-get update && \
     apt-get install --no-install-recommends --yes build-essential
-RUN apt-get install -y pkg-config libhdf5-dev libcurl4-gnutls-dev
+RUN apt-get install -y pkg-config libhdf5-dev libcurl4-gnutls-dev default-libmysqlclient-dev
 
-# install psycopg2 sqlite3 dependencies
-RUN apt-get install -y postgresql-server-dev-all gcc python3-dev musl-dev sqlite3 libsqlite3-dev
+# install psycopg2 mysql dependencies
+RUN apt-get install -y postgresql-server-dev-all gcc python3-dev musl-dev
 
 
 # Install requirments to new virtual environment

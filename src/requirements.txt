@@ -29,6 +29,7 @@ kiwisolver==1.4.4
 matplotlib==3.6.2
 matplotlib-inline==0.1.6
 munkres==1.1.4
+mysqlclient==2.0.3
 nest-asyncio==1.5.6
 numexpr==2.8.4
 numpy==1.23.4
@@ -43,6 +44,7 @@ platformdirs==2.6.2
 prompt-toolkit==3.0.36
 psutil==5.9.4
 psycopg2==2.9.3
+psycopg2-binary==2.9.3
 ptyprocess==0.7.0
 pure-eval==0.2.2
 pybind11==2.10.1
