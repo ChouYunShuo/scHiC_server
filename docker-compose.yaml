@@ -3,8 +3,28 @@ services:
   web:
     build:
        context: ./src
-       dockerfile: dockerfile
+       dockerfile: Dockerfile 
     image: hic_server:v1  
-    
+    environment:
+      - PORT=8020
     env_file:
-      - src/ .env
+      - src/.env
+    ports:
+      - "8020:8020"
+    volumes:
+      - hic_data:/app/api/hic/data
+    command: sh -c "chmod +x /app/migrate.sh && sh /app/migrate.sh && /app/entrypoint.sh"
+    depends_on:
+      - sqlite3_db
+
+  sqlite3_db:
+    image: keinos/sqlite3:latest
+    volumes:
+      - sqlite3_data:/app/db.sqlite3
+    environment:
+      - SQLITE3_DB=sqlite:///app/db.sqlite3
+
+volumes:
+  hic_data:
+    external: true
+  sqlite3_data:

@@ -22,7 +22,7 @@ RUN apt-get update && \
 RUN apt-get install -y pkg-config libhdf5-dev libcurl4-gnutls-dev
 
 # install psycopg2 sqlite3 dependencies
-RUN apt-get install -y postgresql-server-dev-all gcc python3-dev musl-dev sqlite3
+RUN apt-get install -y postgresql-server-dev-all gcc python3-dev musl-dev sqlite3 libsqlite3-dev
 
 
 # Install requirments to new virtual environment
@@ -31,6 +31,4 @@ RUN /opt/venv/bin/pip install pip --upgrade && \
     /opt/venv/bin/pip install -r requirements.txt --use-pep517 && \
     chmod +x entrypoint.sh
 
-RUN chmod +x entrypoint.sh
-
-CMD ["/app/entrypoint.sh"]
+# CMD ["/app/entrypoint.sh"]
