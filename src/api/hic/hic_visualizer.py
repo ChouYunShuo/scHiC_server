@@ -1,3 +1,4 @@
+from pathlib import Path
 from django.conf import settings
 import base64
 from io import BytesIO
@@ -13,7 +14,7 @@ import matplotlib
 matplotlib.use('Agg')
 #from . import Hic_wrapper
 
-
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 REDMAP = LinearSegmentedColormap.from_list(
     "bright_red", [(1, 1, 1), (1, 0, 0)])
 
@@ -70,7 +71,6 @@ def fetch(file_path, root_path, region1, region2):
     with h5py.File(file_path, 'r') as hdf:
         grp = hdf[root_path]
 
-        size_chroms = np.array(grp["chroms"].get("length"))
         name_chroms = np.array(grp["chroms"].get("name"))
         #chrom_dict = get_chrom_dict(name_chroms, size_chroms)
         # print(chrom_dict)
@@ -84,8 +84,7 @@ def fetch(file_path, root_path, region1, region2):
         j0, j1 = region_to_extent(grp, chromids, region2)
 
         i, j, v = query(grp, i0, i1, j0, j1)
-        print(i[:20])
-        print(v[:20])
+
         return coo_matrix((v, (i - i0, j - j0)), shape=(i1 - i0, j1 - j0)).toarray()
 
 
@@ -93,7 +92,6 @@ def query(h5, i0, i1, j0, j1, field="count"):
     i, j, v = [], [], []
 
     edges = h5["indexes"]["bin1_offset"][i0: i1 + 1]
-    print(edges)
     data = h5["pixels"][field]
     p0, p1 = edges[0], edges[-1]
     all_bin2 = h5["pixels"]["bin2_id"][p0:p1]
@@ -117,10 +115,9 @@ def query(h5, i0, i1, j0, j1, field="count"):
     return i, j, v
 
 
-def hic_api(range1, range2):
-    file_path = "data/scHiC.h5"
-    gpath = "resolutions/100000/cells/cell_id0"
-    fpath = os.path.join(settings.BASE_DIR, "api/hic/"+file_path)
+def hic_api(fp, resolution, cell_id, range1, range2):
+    gpath = "resolutions/"+resolution+"/cells/cell_id"+cell_id
+    fpath = str(ROOT_DIR)+"/hic_data/"+fp
 
     row_chrom, row_lo, row_hi = parse_region(range1)
     col_chrom, col_lo, col_hi = parse_region(range2)
@@ -168,6 +165,4 @@ def visualize(fpath, gpath, range1, range2):
 
 
 if __name__ == "__main__":
-    file_path = "data/scHiC5.h5"
-    visualize(file_path, "resolutions/50000/cells/cell_id3",
-              "chrom3:0-20000000", "chrom3:0-20000000")
+    pass
