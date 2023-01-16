@@ -12,8 +12,10 @@ from scipy.sparse import coo_matrix
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import re
+import logging
+logger = logging.getLogger('django')
 matplotlib.use('Agg')
-#from . import Hic_wrapper
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 REDMAP = LinearSegmentedColormap.from_list(
@@ -31,6 +33,21 @@ def parse_region(range: str) -> Tuple:
     pos = parts[1].split("-")
 
     return parts[0], pos[0], pos[1]
+
+
+def is_valid_region_string(region_string):
+    """
+    Check if a string is in the format "chromX:start-end" where X is a number between 1 and 23 or X,Y and start < end, end is greater than 0
+    :param region_string: The input string to check
+    :return: A boolean indicating whether the string is in the correct format
+    """
+    pattern = re.compile(
+        r"^chrom([1-9]|1[0-9]|2[0-3]|X|Y):([0-9][0-9]*)-([1-9][0-9]*)$")
+    match = pattern.match(region_string)
+    if match:
+        start, end = float(match.group(2)), float(match.group(3))
+        return start < end
+    return False
 
 
 def get_chrom_ids(name_chroms):
@@ -87,12 +104,14 @@ def fetch(file_path, root_path, region1, region2):
 
         # Get the array of chromosome names
         name_chroms = np.array(grp["chroms"].get("name"))
-
+        # Get the array of chromosome length
+        len_chroms = np.array(grp["chroms"].get("length"))
         # Get the chromosome IDs for each region
         chromids = get_chrom_ids(name_chroms)
 
         region1 = parse_region(region1)
         region2 = parse_region(region2)
+
         # Get the extent of the first region in the group
         i0, i1 = region_to_extent(grp, chromids, region1)
         # Get the extent of the second region in the group
@@ -154,12 +173,16 @@ def hic_api(file_path: str, resolution: str, cell_id: str, range1: str, range2: 
     # Construct the file path for the hic data and the gpath
     gpath = os.path.join("resolutions", resolution,
                          "cells", f"cell_id{cell_id}")
-    hic_data_file_path = os.path.join(ROOT_DIR, "hic_datas", file_path)
+    hic_data_file_path = os.path.join(ROOT_DIR, "hic_data", file_path)
     if not os.path.exists(hic_data_file_path):
         raise FileNotFoundError(
             "No such file or directory with name: "+str(file_path))
 
-    # Get chrom, lo, and hi values for range1 and range2
+    # Check and get chrom, lo, and hi values for range1 and range2
+    if not is_valid_region_string(range1):
+        raise ValueError("Request query string not valid: "+str(range1))
+    if not is_valid_region_string(range2):
+        raise ValueError("Request query string not valid: "+str(range2))
     row_chrom, row_lo, row_hi = parse_region(range1)
     col_chrom, col_lo, col_hi = parse_region(range2)
 
