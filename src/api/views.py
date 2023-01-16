@@ -31,9 +31,13 @@ class scHicQueryView(APIView):
         cell_id = data['cell_id']
         range1 = data['chrom1']
         range2 = data['chrom2']
-        arr = hic_api(dataset.file_path, resolution, cell_id, range1, range2)
-        json_array = json.dumps(arr, cls=NumpyArrayEncoder)
-        return Response(json_array)
+        try:
+            arr = hic_api(dataset.file_path, resolution,
+                          cell_id, range1, range2)
+            json_array = json.dumps(arr, cls=NumpyArrayEncoder)
+            return Response(json_array)
+        except Exception as e:
+            return Response({"invalid": str(e)}, status=400)
 
 
 class DatasetListAPIView(generics.ListAPIView):
