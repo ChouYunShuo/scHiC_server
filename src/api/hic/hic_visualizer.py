@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import re
 import logging
+import hicstraw
 logger = logging.getLogger('django')
 matplotlib.use('Agg')
 
@@ -169,7 +170,7 @@ FIGURE_WIDTH = 11
 FIGURE_HEIGHT = 10
 
 
-def hic_api(file_path: str, resolution: str, cell_id: str, range1: str, range2: str) -> str:
+def hic_api(file_path: str, resolution: str, cell_id: str, range1: str, range2: str):
     # Construct the file path for the hic data and the gpath
     gpath = os.path.join("resolutions", resolution,
                          "cells", f"cell_id{cell_id}")
@@ -192,7 +193,10 @@ def hic_api(file_path: str, resolution: str, cell_id: str, range1: str, range2: 
     arr = fetch(hic_data_file_path, gpath, range1, range2)
     # Apply log2 transformation to the data
     arr = np.log2(arr+1)
+    norm_arr = (arr-np.min(arr))/(np.max(arr)-np.min(arr))
 
+    return norm_arr
+    '''
     # Create a BytesIO object to save the image
     image = BytesIO()
     # Create a figure with specified size
@@ -211,6 +215,28 @@ def hic_api(file_path: str, resolution: str, cell_id: str, range1: str, range2: 
     image.seek(0)
     # Encode the image to base64 and return the encoded string
     return base64.b64encode(image.getvalue()).decode('utf-8')
+    '''
+
+
+def hic_test_api(resolution: str, range1: str, range2: str):
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    hic_path = str(root_dir)+"/hic_data/ENCFF718AWL.hic"
+    hic = hicstraw.HiCFile(hic_path)
+    if not is_valid_region_string(range1):
+        raise ValueError("Request query string not valid: "+str(range1))
+    if not is_valid_region_string(range2):
+        raise ValueError("Request query string not valid: "+str(range2))
+    row_chrom, row_lo, row_hi = parse_region(range1)
+    col_chrom, col_lo, col_hi = parse_region(range2)
+
+    mzd = hic.getMatrixZoomData(
+        row_chrom[5:], col_chrom[5:], "observed", "KR", "BP", int(resolution))
+    arr = mzd.getRecordsAsMatrix(
+        int(row_lo), int(row_hi), int(col_lo), int(col_hi))
+    arr = np.log2(arr+1)
+    arr = (arr-np.min(arr))/(np.max(arr)-np.min(arr))
+
+    return arr
 
 
 def visualize(fpath, gpath, range1, range2):
@@ -237,4 +263,7 @@ def visualize(fpath, gpath, range1, range2):
 
 
 if __name__ == "__main__":
-    pass
+    fpath = os.path.join(ROOT_DIR, "hic_data", "scHiC5.h5")
+    gpath = os.path.join("resolutions", "50000",
+                         "cells", f"cell_id{0}")
+    visualize(fpath, gpath, "chrom1:0-20000000", "chrom1:0-20000000")

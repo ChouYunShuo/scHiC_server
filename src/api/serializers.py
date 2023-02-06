@@ -8,7 +8,6 @@ class DatasetSerializer(serializers.ModelSerializer):
         fields = [
             'pk',
             'name',
-            'file_path',
             'description',
             'resolutions',
             'cells'
