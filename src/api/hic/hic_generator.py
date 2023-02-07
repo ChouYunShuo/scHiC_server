@@ -8,7 +8,7 @@ import hicstraw
 import os
 import logging
 import traceback
-
+from pathlib import Path
 
 CHROM_DTYPE = np.dtype("S")
 CHROMID_DTYPE = np.int32
@@ -17,14 +17,6 @@ COORD_DTYPE = np.int32
 BIN_DTYPE = np.int64
 COUNT_DTYPE = np.int32
 OFFSET_DTYPE = np.int64
-
-hic = hicstraw.HiCFile(
-    "data/ENCFF718AWL.hic")
-
-file_path = "data/scHiC.h5"
-
-RES = 1000
-bin_id_map = defaultdict(int)
 
 """
 └── resolutions
@@ -63,131 +55,6 @@ bin_id_map = defaultdict(int)
 """
 
 
-def create_h5():
-    with h5py.File(file_path, 'w') as hdf:
-        res10_6_grp = hdf.create_group("resolutions/100000")
-        cell_cnt = 1
-
-        grp_chroms = res10_6_grp.create_group("chroms")
-        np_chroms_names, np_chroms_length = write_chroms(grp_chroms)
-
-        grp_bins = res10_6_grp.create_group("bins")
-
-        res = 100000
-        step = 500
-
-        write_bins(res, np_chroms_names, np_chroms_length, grp_bins)
-        getBinIdMap(res, np_chroms_names, np_chroms_length)
-
-        cell_groups = res10_6_grp.create_group("cells")
-        for i in range(cell_cnt):
-            cur_cell_grp = cell_groups.create_group("cell_id"+str(i))
-
-            cell_grp_chroms = cur_cell_grp.create_group("chroms")
-            cell_chroms_names, cell_chroms_length = write_chroms(
-                cell_grp_chroms)
-
-            cell_grp_bins = cur_cell_grp.create_group("bins")
-            write_bins(res, np_chroms_names, np_chroms_length, cell_grp_bins)
-
-            cell_grp_pixels = cur_cell_grp.create_group("pixels")
-            write_pixels(res, step, np_chroms_names,
-                         np_chroms_length, cell_grp_pixels)
-
-
-def getBinIdMap(res, chroms_names, chrom_lens):
-    cnt = 0
-    for index in range(len(chroms_names)):
-        for i in range(int((chrom_lens[index])/(res))+1):
-            chrom = str(chroms_names[index])
-            start = str(i*res)
-            end = str((i+1)*res)
-            bin_id_map[chrom+start+end] = cnt
-            cnt += 1
-
-
-def find_binId(chrom, start, end):
-    return bin_id_map[str(chrom)+str(start)+str(end)]
-
-
-def append_h5_indexes(fpath, gpath):
-    with h5py.File(fpath, "r+") as hdf:
-        h5 = hdf[gpath]
-        cell_cnt = 1
-        cells = h5["cells"]
-
-        for i in range(cell_cnt):
-            cur_cell_grp = cells["cell_id"+str(i)]
-            n_chroms = len(cur_cell_grp["chroms"].get("length"))
-            n_bins = len(cur_cell_grp["bins"].get("chrom"))
-            n_pixels = len(cur_cell_grp["pixels"].get("bin1_id"))
-            chrom_offset = get_bin_index(
-                cur_cell_grp["bins"], n_chroms, n_bins)
-            bin_offset = get_pixel_index(
-                cur_cell_grp["pixels"], n_bins, n_pixels)
-            #grp_index = cur_cell_grp.create_group("indexes")
-
-            #write_index(grp_index, chrom_offset, bin_offset)
-
-
-def get_bin_index(grp, n_chroms, n_bins):
-    chrom_ids = grp["chrom"]
-    chrom_offset = np.zeros(n_chroms + 1, dtype=OFFSET_DTYPE)
-    index = 0
-    for start, length, value in zip(*rlencode(chrom_ids)):
-        chrom_offset[index] = start
-        index += 1
-    chrom_offset[index] = n_bins
-
-    return chrom_offset
-
-
-def get_pixel_index(grp, n_bins, n_pixels):
-    bin1 = np.array(grp["bin1_id"])
-    bin1_offset = np.zeros(n_bins + 1, dtype=OFFSET_DTYPE)
-    curr_val = 0
-
-    for start, length, value in zip(*rlencode(bin1, 1000000)):
-        bin1_offset[curr_val: value + 1] = start
-        curr_val = value+1
-
-    bin1_offset[curr_val:] = n_pixels
-
-    return bin1_offset
-
-
-def write_index(grp, chrom_offset, bin_offset):
-
-    grp.create_dataset(
-        "chrom_offset",
-        shape=(len(chrom_offset),),
-        dtype=OFFSET_DTYPE,
-        data=chrom_offset,
-    )
-    grp.create_dataset(
-        "bin1_offset",
-        shape=(len(bin_offset),),
-        dtype=OFFSET_DTYPE,
-        data=bin_offset,
-    )
-
-
-def read_h5():
-    with h5py.File(file_path, 'r') as hdf:
-        print("Items in root: ", list(hdf.items()))
-        G1 = hdf.get("resolutions/100000")
-        chroms = G1.get("chroms")
-        print("Res 1000 chrom items: ", list(chroms.items()))
-        dset = np.array(chroms.get("length"))
-        print(dset)
-
-
-# write_bins()
-# create_h5()
-# read_h5()
-#append_h5_indexes("data/scHiC2.h5", "resolutions/100000/")
-
-
 def check_resolution_valid(res, hic_res):
     if not res:
         res = hic_res
@@ -200,7 +67,7 @@ def check_resolution_valid(res, hic_res):
     return res
 
 
-def write_chroms(grp):
+def write_chroms(grp, hic, h5_opts):
     chrom_dict = defaultdict(list)
     for chrom in hic.getChromosomes():
         if chrom.name == 'All':
@@ -214,14 +81,14 @@ def write_chroms(grp):
     lengths = np.array(chrom_dict["length"], dtype=CHROMSIZE_DTYPE)
 
     grp.create_dataset('name', shape=(n_chroms,),
-                       dtype=names.dtype, data=names,)
+                       dtype=names.dtype, data=names, **h5_opts)
     grp.create_dataset("length", shape=(n_chroms,),
-                       dtype=lengths.dtype, data=lengths, )
+                       dtype=lengths.dtype, data=lengths, **h5_opts)
 
     return names, lengths
 
 
-def write_bins(res, chroms_names, chrom_lens, grp):
+def write_bins(res, chroms_names, chrom_lens, grp, h5_opts):
     bin_dict = defaultdict(list)
     for index in range(len(chroms_names)):
         for i in range(int((chrom_lens[index])/(res))+1):
@@ -236,21 +103,21 @@ def write_bins(res, chroms_names, chrom_lens, grp):
     ends = np.array(bin_dict["end"], dtype=COORD_DTYPE)
 
     grp.create_dataset('chrom', shape=(n_bins,),
-                       dtype=chroms.dtype, data=chroms,)
+                       dtype=chroms.dtype, data=chroms, **h5_opts)
     grp.create_dataset("start", shape=(n_bins,),
-                       dtype=starts.dtype, data=starts, )
+                       dtype=starts.dtype, data=starts, **h5_opts)
     grp.create_dataset("end", shape=(n_bins,),
-                       dtype=ends.dtype, data=ends, )
+                       dtype=ends.dtype, data=ends, **h5_opts)
 
 
-def setup_pixels(grp, nbins):
+def setup_pixels(grp, nbins, h5_opts):
     max_shape = nbins*nbins
     grp.create_dataset('bin1_id', shape=(max_shape,),
-                       dtype=BIN_DTYPE, chunks=True)
+                       dtype=BIN_DTYPE, **h5_opts)
     grp.create_dataset("bin2_id", shape=(max_shape,),
-                       dtype=BIN_DTYPE, chunks=True)
+                       dtype=BIN_DTYPE, **h5_opts)
     grp.create_dataset("count", shape=(max_shape,),
-                       dtype=COUNT_DTYPE, chunks=True)
+                       dtype=COUNT_DTYPE, **h5_opts)
 
 
 def write_pixels(grp, hic, chrom_names, chrom_lens, chunksize, res, columns, chrom_offset):
@@ -279,6 +146,48 @@ def sort_pixel_by_bin(grp, cols):
    # sort_pixel_by_bin(grp, list(grp))
 
 
+def get_bin_index(grp, n_chroms, n_bins):
+    chrom_ids = grp["chrom"]
+    chrom_offset = np.zeros(n_chroms + 1, dtype=OFFSET_DTYPE)
+    index = 0
+    for start, length, value in zip(*rlencode(chrom_ids)):
+        chrom_offset[index] = start
+        index += 1
+    chrom_offset[index] = n_bins
+
+    return chrom_offset
+
+
+def get_pixel_index(grp, n_bins, n_pixels):
+    bin1 = np.array(grp["bin1_id"])
+    bin1_offset = np.zeros(n_bins + 1, dtype=OFFSET_DTYPE)
+    curr_val = 0
+
+    for start, length, value in zip(*rlencode(bin1, 1000000)):
+        bin1_offset[curr_val: value + 1] = start
+        curr_val = value+1
+
+    bin1_offset[curr_val:] = n_pixels
+
+    return bin1_offset
+
+
+def write_index(grp, chrom_offset, bin_offset, h5_opts):
+
+    grp.create_dataset(
+        "chrom_offset",
+        shape=(len(chrom_offset),),
+        dtype=OFFSET_DTYPE,
+        data=chrom_offset, **h5_opts
+    )
+    grp.create_dataset(
+        "bin1_offset",
+        shape=(len(bin_offset),),
+        dtype=OFFSET_DTYPE,
+        data=bin_offset, **h5_opts
+    )
+
+
 '''
 
 Helper class that transform .hic to hdf5 format.
@@ -291,19 +200,26 @@ class SCHiCGenerator:
         self.hic_path = hic_path
         self.hic = hicstraw.HiCFile(hic_path)
         self.h5_path = ""
+        self.h5_opts = {}
+
+    def set_h5_opts(self):
+        self.h5_opts["compression"] = "gzip"
+        self.h5_opts["compression_opts"] = 6
+        self.h5_opts["shuffle"] = True
+        self.h5_opts["chunks"] = True
 
     def create_all_h5(self, file_name, res=[]):
 
         if os.path.exists(file_name):
             raise RuntimeError("sc-HiC file: " + file_name + " already exists")
         self.h5_path = file_name
+        self.set_h5_opts()
         all_res = check_resolution_valid(res, self.hic.getResolutions())
-
         with h5py.File(self.h5_path, 'w') as hdf:
             root_grp = hdf.create_group("resolutions")
         for res in all_res:
             print("Creating resolution: "+str(res))
-            self.create_res_h5(root_grp, res)
+            self.create_res_h5(root_grp, res, self.h5_opts)
 
     '''
     params:
@@ -312,17 +228,19 @@ class SCHiCGenerator:
         chunksize: bin size for query, endx = startx+res*chunksize
     '''
 
-    def create_res_h5(self, root_grp, res, cell_cnt=4, chunksize=500):
+    def create_res_h5(self, root_grp, res, h5_opts, cell_cnt=2, chunksize=500):
 
         with h5py.File(self.h5_path, 'r+') as hdf:
             res_grp = hdf.create_group("resolutions/"+str(res))
 
             grp_chroms = res_grp.create_group("chroms")
-            np_chroms_names, np_chroms_length = write_chroms(grp_chroms)
+            np_chroms_names, np_chroms_length = write_chroms(
+                grp_chroms, self.hic, h5_opts)
 
             grp_bins = grp_chroms.create_group("bins")
 
-            write_bins(res, np_chroms_names, np_chroms_length, grp_bins)
+            write_bins(res, np_chroms_names,
+                       np_chroms_length, grp_bins, h5_opts)
 
             cell_groups = res_grp.create_group("cells")
 
@@ -332,23 +250,22 @@ class SCHiCGenerator:
                     "cell_id"+str(i))
                 cell_grp_chroms = cur_cell_grp.create_group("chroms")
                 cell_chroms_names, cell_chroms_length = write_chroms(
-                    cell_grp_chroms)
+                    cell_grp_chroms, self.hic, h5_opts)
 
-                getBinIdMap(res, np_chroms_names, np_chroms_length)
                 cell_grp_bins = cur_cell_grp.create_group("bins")
                 write_bins(res, np_chroms_names,
-                           np_chroms_length, cell_grp_bins)
+                           np_chroms_length, cell_grp_bins, h5_opts)
 
                 n_chroms = len(cur_cell_grp["chroms"].get("length"))
                 n_bins = len(cur_cell_grp["bins"].get("chrom"))
 
                 cell_grp_pixels = cur_cell_grp.create_group("pixels")
 
-                setup_pixels(cell_grp_pixels, n_bins)
+                setup_pixels(cell_grp_pixels, n_bins, h5_opts)
                 chrom_offset = get_bin_index(
                     cur_cell_grp["bins"], n_chroms, n_bins)
 
-                write_pixels(cell_grp_pixels, hic, np_chroms_names, cell_chroms_length,
+                write_pixels(cell_grp_pixels, self.hic, np_chroms_names, cell_chroms_length,
                              chunksize, res, list(cur_cell_grp["pixels"]), chrom_offset)
 
                 sort_pixel_by_bin(
@@ -359,7 +276,7 @@ class SCHiCGenerator:
                     cur_cell_grp["pixels"], n_bins, n_pixels)
                 grp_index = cur_cell_grp.create_group("indexes")
 
-                write_index(grp_index, chrom_offset, bin_offset)
+                write_index(grp_index, chrom_offset, bin_offset, h5_opts)
 
 
 def partition(start, stop, step):
@@ -383,8 +300,8 @@ class MatrixParser:
                 print(self.chrom_names[index1], self.chrom_names[index2])
                 chrom1 = self.matrix_size[index1]
                 chrom2 = self.matrix_size[index2]
-                cur_matrix_object = hic.getMatrixZoomData(
-                    self.chrom_names[index1], self.chrom_names[index2], "observed", "KR", "BP", self.res)
+                cur_matrix_object = self.hic.getMatrixZoomData(
+                    self.chrom_names[index1], self.chrom_names[index2], "observed", "NONE", "BP", self.res)  # KR, SCALE
 
                 for startx in chrom1[:-1]:
                     endx = startx+self.res*self.chunksize
@@ -405,8 +322,19 @@ class MatrixParser:
 
 
 if __name__ == "__main__":
-    test = SCHiCGenerator("data/ENCFF718AWL.hic")
-    test.create_all_h5("data/scHiC5.h5", [500000, 100000, 50000])
+    '''
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    test = SCHiCGenerator(str(root_dir)+"/hic_data/ENCFF718AWL.hic")
+    test.create_all_h5(str(root_dir)+"/hic_data/scHiC7.h5",
+                       [2500000, 1000000, 500000, 250000])  # 250000, 100000, 50000, 25000, 10000, 5000
+    '''
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    file_path = str(root_dir)+"/hic_data/scHiC6.h5"
+
+    with h5py.File(file_path, 'r') as hdf:
+        cur_cell_grp = hdf.get("resolutions/100000/cells/cell_id0")
+        n_chroms = cur_cell_grp["chroms"].get("length")
+        print(list(n_chroms))
 
 
 '''
