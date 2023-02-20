@@ -329,9 +329,13 @@ if __name__ == "__main__":
                        [2500000, 1000000, 500000, 250000])  # 250000, 100000, 50000, 25000, 10000, 5000
     '''
     root_dir = Path(__file__).resolve().parent.parent.parent.parent
-    file_path = str(root_dir)+"/hic_data/scHiC6.h5"
+    file_path = str(root_dir)+"/hic_data/scHiC5.h5"
 
     with h5py.File(file_path, 'r') as hdf:
+        all_res = hdf.get("resolutions")
+        print(list(all_res))
+        all_cell = hdf.get("resolutions/100000/cells")
+        print(list(all_cell))
         cur_cell_grp = hdf.get("resolutions/100000/cells/cell_id0")
         n_chroms = cur_cell_grp["chroms"].get("length")
         print(list(n_chroms))
