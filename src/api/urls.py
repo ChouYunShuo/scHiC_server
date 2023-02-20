@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import scHicQueryView, DatasetListAPIView, scHicTestView, dataset_retreive_view
+from .views import scHicQueryView, chromLenView, dataset_retreive_view
 from . import views
 urlpatterns = [
     #path('', main),
@@ -7,5 +7,6 @@ urlpatterns = [
     #path('datasets', DatasetListAPIView.as_view()),
     path('datasets', dataset_retreive_view),
     path('datasets/<int:pk>/', dataset_retreive_view),
-    path('test', scHicTestView.as_view(), name="HiC Contact Map"),
+    path('chromlens', chromLenView)
+    #path('test', scHicTestView.as_view(), name="HiC Contact Map"),
 ]

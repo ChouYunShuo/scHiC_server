@@ -1,4 +1,4 @@
-from . hic.hic_visualizer import hic_api, hic_test_api
+from . hic.hic_visualizer import hic_api, hic_test_api, hic_get_chrom_len
 from django.shortcuts import render, get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
@@ -39,6 +39,23 @@ class scHicQueryView(APIView):
             return Response(json_array)
         except Exception as e:
             return Response({"invalid": str(e)}, status=400)
+
+
+@api_view(["POST"])
+def chromLenView(request):
+    data = request.data
+    logger.info(data)
+
+    resolution = data['resolution']
+    cell_id = data['cell_id']
+    dataset = get_object_or_404(Dataset, name=data['name'])
+    try:
+        arr = hic_get_chrom_len(dataset.file_path, resolution, cell_id)
+        json_array = json.dumps(arr, cls=NumpyArrayEncoder)
+        logger.info(json_array)
+        return Response(json_array)
+    except Exception as e:
+        return Response({"invalid": str(e)}, status=400)
 
 
 class scHicTestView(APIView):

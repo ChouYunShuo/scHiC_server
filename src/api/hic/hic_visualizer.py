@@ -15,6 +15,7 @@ import matplotlib
 import re
 import logging
 import hicstraw
+
 logger = logging.getLogger('django')
 matplotlib.use('Agg')
 
@@ -196,26 +197,22 @@ def hic_api(file_path: str, resolution: str, cell_id: str, range1: str, range2: 
     norm_arr = (arr-np.min(arr))/(np.max(arr)-np.min(arr))
 
     return norm_arr
-    '''
-    # Create a BytesIO object to save the image
-    image = BytesIO()
-    # Create a figure with specified size
-    im = plt.figure(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
-    plt.title(range1 + "&" + range2)
-    # Plot the data on the figure using imshow
-    plt.imshow(
-        arr,
-        interpolation="none",
-        extent=[int(col_lo), int(col_hi), int(row_hi), int(row_lo)],
-        cmap=REDMAP,
-    )
-    # Save the figure to the BytesIO object
-    im.savefig(image, format='png')
-    # Rewind the BytesIO object to the beginning
-    image.seek(0)
-    # Encode the image to base64 and return the encoded string
-    return base64.b64encode(image.getvalue()).decode('utf-8')
-    '''
+
+
+def hic_get_chrom_len(file_path: str, resolution: str, cell_id: str):
+    gpath = os.path.join("resolutions", resolution,
+                         "cells", f"cell_id{cell_id}")
+    hic_data_file_path = os.path.join(ROOT_DIR, "hic_data", file_path)
+    len_chroms = []
+    if not os.path.exists(hic_data_file_path):
+        raise FileNotFoundError(
+            "No such file or directory with name: "+str(file_path))
+    with h5py.File(hic_data_file_path, 'r') as hdf:
+        # Get the group at the specified root path
+        grp = hdf[gpath]
+        len_chroms = np.array(grp["chroms"].get("length"))
+
+    return len_chroms
 
 
 def hic_test_api(resolution: str, range1: str, range2: str):
@@ -263,7 +260,10 @@ def visualize(fpath, gpath, range1, range2):
 
 
 if __name__ == "__main__":
+    '''
     fpath = os.path.join(ROOT_DIR, "hic_data", "scHiC5.h5")
     gpath = os.path.join("resolutions", "50000",
                          "cells", f"cell_id{0}")
     visualize(fpath, gpath, "chrom1:0-20000000", "chrom1:0-20000000")
+    '''
+    hic_get_chrom_len('scHiC5.h5', '50000', '0')
