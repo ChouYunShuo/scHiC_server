@@ -228,7 +228,7 @@ class SCHiCGenerator:
         chunksize: bin size for query, endx = startx+res*chunksize
     '''
 
-    def create_res_h5(self, root_grp, res, h5_opts, cell_cnt=2, chunksize=500):
+    def create_res_h5(self, root_grp, res, h5_opts, cell_cnt=4, chunksize=500):
 
         with h5py.File(self.h5_path, 'r+') as hdf:
             res_grp = hdf.create_group("resolutions/"+str(res))
@@ -322,11 +322,11 @@ class MatrixParser:
 
 
 if __name__ == "__main__":
-    '''
+    
     root_dir = Path(__file__).resolve().parent.parent.parent.parent
     test = SCHiCGenerator(str(root_dir)+"/hic_data/ENCFF718AWL.hic")
-    test.create_all_h5(str(root_dir)+"/hic_data/scHiC7.h5",
-                       [2500000, 1000000, 500000, 250000])  # 250000, 100000, 50000, 25000, 10000, 5000
+    test.create_all_h5(str(root_dir)+"/hic_data/scHiC5.h5",
+                       [100000, 500000, 50000])  # 250000, 100000, 50000, 25000, 10000, 5000
     '''
     root_dir = Path(__file__).resolve().parent.parent.parent.parent
     file_path = str(root_dir)+"/hic_data/scHiC5.h5"
@@ -340,7 +340,7 @@ if __name__ == "__main__":
         n_chroms = cur_cell_grp["chroms"].get("length")
         print(list(n_chroms))
 
-
+    '''
 '''
 p1 = []
 p2 = []
