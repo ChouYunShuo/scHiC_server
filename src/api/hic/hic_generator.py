@@ -141,7 +141,7 @@ def sort_pixel_by_bin(grp, cols):
         grp[col][...] = dsets[i][ind]
 
 # with h5py.File("data/scHiC2.h5", 'r+') as hdf:
-   ## G1 = hdf.get("resolutions/100000/cells/cell_id0")
+   # G1 = hdf.get("resolutions/100000/cells/cell_id0")
    # grp = G1.get("pixels")
    # sort_pixel_by_bin(grp, list(grp))
 
@@ -371,4 +371,4 @@ print(numpy_matrix[0])
 i, j = np.nonzero(numpy_matrix)
 print(i)
 '''
-#print(numpy_matrix[i, j].reshape(1, -1)[:100])
+# print(numpy_matrix[i, j].reshape(1, -1)[:100])
