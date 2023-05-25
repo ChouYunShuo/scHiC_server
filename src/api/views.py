@@ -1,4 +1,4 @@
-from . hic.hic_visualizer import hic_api, hic_test_api, hic_get_chrom_len
+from . hic.hic_visualizer import hic_fetch_maps, hic_fetch_map, hic_test_api, hic_get_chrom_len, hic_get_embedding
 from django.shortcuts import render, get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
@@ -9,15 +9,19 @@ from .serializers import *
 
 import json
 from json import JSONEncoder
-import numpy
+import numpy as np
+import time
 import logging
 logger = logging.getLogger('django')
 
 
 class NumpyArrayEncoder(JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, numpy.ndarray):
-            return obj.tolist()
+        if isinstance(obj, np.ndarray):
+            if np.issubdtype(obj.dtype, np.number):
+                return obj.tolist()
+            elif np.issubdtype(obj.dtype, np.bytes_):
+                return obj.astype(str).tolist()
         return JSONEncoder.default(self, obj)
 # Create your views here.
 
@@ -25,16 +29,24 @@ class NumpyArrayEncoder(JSONEncoder):
 class scHicQueryView(APIView):
     def post(self, request):
         data = request.data
-        logger.info(data)
-
+    
         dataset = get_object_or_404(Dataset, name=data['dataset_name'])
         resolution = data['resolution']
         cell_id = data['cell_id']
         range1 = data['chrom1']
         range2 = data['chrom2']
+        logger.info([data['dataset_name'],data['resolution'],data['chrom1'],data['chrom2']])
+
         try:
-            arr = hic_api(dataset.file_path, resolution,
-                          cell_id, range1, range2)
+            start_time = time.time()
+            if(isinstance(cell_id, list)):
+                logger.info(len(cell_id))
+                arr = hic_fetch_maps(dataset.file_path, resolution, cell_id, range1, range2, True)
+            else:
+                arr = hic_fetch_map(dataset.file_path, resolution,
+                            cell_id, range1, range2)
+            end_time = time.time()
+            logger.info(f"Runtime: {end_time - start_time} seconds")
             json_array = json.dumps(arr, cls=NumpyArrayEncoder)
             return Response(json_array)
         except Exception as e:
@@ -52,10 +64,28 @@ def chromLenView(request):
     try:
         arr = hic_get_chrom_len(dataset.file_path, resolution, cell_id)
         json_array = json.dumps(arr, cls=NumpyArrayEncoder)
-        logger.info(json_array)
+        #logger.info(json_array)
         return Response(json_array)
     except Exception as e:
         return Response({"invalid": str(e)}, status=400)
+    
+@api_view(["POST"])
+def embeddingView(request):
+    data = request.data
+    logger.info(data)
+
+    dataset = get_object_or_404(Dataset, name=data['dataset_name'])
+    resolution = data['resolution']
+    embed_type = data['embed_type']
+
+    try:
+        arr = hic_get_embedding(dataset.file_path, resolution, embed_type)
+        json_array = json.dumps(arr, cls=NumpyArrayEncoder)
+        return Response(json_array)
+    except Exception as e:
+        return Response({"invalid": str(e)}, status=400)
+
+
 
 
 class scHicTestView(APIView):
