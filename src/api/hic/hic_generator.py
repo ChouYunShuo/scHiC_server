@@ -278,6 +278,9 @@ class SCHiCGenerator:
 
                 write_index(grp_index, chrom_offset, bin_offset, h5_opts)
 
+    
+
+
 
 def partition(start, stop, step):
     return ((i, min(i + step, stop)) for i in range(start, stop, step))
