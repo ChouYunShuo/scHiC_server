@@ -46,8 +46,8 @@ class scHicQueryView(APIView):
                 arr = hic_fetch_map(dataset.file_path, resolution,
                             cell_id, range1, range2)
             end_time = time.time()
-            logger.info(f"Runtime: {end_time - start_time} seconds")
             json_array = json.dumps(arr, cls=NumpyArrayEncoder)
+            logger.info(f"Runtime: {end_time - start_time} seconds")
             return Response(json_array)
         except Exception as e:
             return Response({"invalid": str(e)}, status=400)
@@ -75,10 +75,11 @@ def embeddingView(request):
     logger.info(data)
 
     dataset = get_object_or_404(Dataset, name=data['dataset_name'])
-    resolution = data['resolution']
-    embed_type = data['embed_type']
+   
 
     try:
+        resolution = data['resolution']
+        embed_type = data['embed_type']
         arr = hic_get_embedding(dataset.file_path, resolution, embed_type)
         json_array = json.dumps(arr, cls=NumpyArrayEncoder)
         return Response(json_array)

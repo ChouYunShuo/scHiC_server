@@ -1,0 +1,42 @@
+version: "3.8"
+services:
+  web:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    image: hic_server:v1
+    environment:
+      - PORT=8020
+    env_file:
+      - src/.env
+    ports:
+      - "8020:8020"
+    volumes:
+      - ./hic_data:/app/api/hic/hic_data
+    command: sh -c "chmod +x /app/migrate.sh && sh /app/migrate.sh && /app/entrypoint.sh"
+    depends_on:
+      - postgres_db
+
+  postgres_db:
+    image: postgres
+    restart: always
+    command: -p 5434
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - src/.env
+    expose:
+      - 5434
+    ports:
+      - "5434:5434"
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+volumes:
+  # hic_data:
+  #   external: true
+  postgres_data:

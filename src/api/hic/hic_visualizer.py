@@ -22,7 +22,8 @@ import psutil
 logger = logging.getLogger('django')
 matplotlib.use('Agg')
 
-ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
+#ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
+DATA_DIR = Path(__file__).resolve().parent
 REDMAP = LinearSegmentedColormap.from_list(
     "bright_red", [(1, 1, 1), (1, 0, 0)])
 
@@ -92,7 +93,6 @@ def region_to_extent(res_grp, h5, chrom_ids, region):
 
     return chrom_lo + np.searchsorted(chrom_bins, int(start), "right") - 1, chrom_lo + np.searchsorted(chrom_bins, int(end), "left")
 
-
 def fetch(file_path, root_path, cell_id, region1, region2):
     """
     Retrieve data from an HDF5 file for a specified pair of regions.
@@ -102,7 +102,7 @@ def fetch(file_path, root_path, cell_id, region1, region2):
     :param region2: The second region to retrieve data for.
     :return: A dense array containing the data for the specified regions.
     """
-    # Open an HDF5 file for reading using h5py
+     # Open an HDF5 file for reading using h5py
     with h5py.File(file_path, 'r') as hdf:
         # Get the group at the specified root path
         grp = hdf[root_path]
@@ -119,6 +119,7 @@ def fetch(file_path, root_path, cell_id, region1, region2):
         i0, i1 = region_to_extent(grp, cell_grp, chromids, region1)
         # Get the extent of the second region in the group
         j0, j1 = region_to_extent(grp, cell_grp, chromids, region2)
+
         # Perform a query on the group to get the values at the specified extent
         i, j, v = query(cell_grp, i0, i1, j0, j1)
 
@@ -128,7 +129,8 @@ def fetch(file_path, root_path, cell_id, region1, region2):
 
         # Return a dense array created from the sparse coo_matrix
         arr = coo_matrix((v, (i - i0, j - j0)), shape=(i1 - i0, j1 - j0)).toarray()
-        return arr+arr.T
+        return arr
+
 
 
 def query(h5, i0, i1, j0, j1, field="count") -> Tuple:
@@ -178,7 +180,8 @@ def hic_fetch_map(file_path: str, resolution: str, cell_id: str, range1: str, ra
     #                      "cells", f"cell_id{cell_id}")
     gpath = os.path.join("resolutions", resolution)
 
-    hic_data_file_path = os.path.join(ROOT_DIR, "hic_data", file_path)
+    hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
+    
     if not os.path.exists(hic_data_file_path):
         raise FileNotFoundError(
             "No such file or directory with name: "+str(file_path))
@@ -200,16 +203,15 @@ def hic_fetch_map(file_path: str, resolution: str, cell_id: str, range1: str, ra
     return norm_arr
 
 def fetch_and_add(hic_data_file_path, gpath, id, range1, range2):
-    arr = fetch(hic_data_file_path, gpath, id, range1, range2)
-    return np.array(arr)
+    return fetch(hic_data_file_path, gpath, id, range1, range2)
 
 def hic_fetch_maps(file_path: str, resolution: str, cell_ids: list, range1: str, range2: str, isConcurent=False):
     gpath = os.path.join("resolutions", resolution)
-    hic_data_file_path = os.path.join(ROOT_DIR, "hic_data", file_path)
+    hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
 
     if not os.path.exists(hic_data_file_path):
         raise FileNotFoundError(
-            "No such file or directory with name: "+str(file_path))
+            "No such file or directory with name: "+str(hic_data_file_path))
 
     # Check and get chrom, lo, and hi values for range1 and range2
     if not is_valid_region_string(range1):
@@ -245,11 +247,12 @@ def hic_fetch_maps(file_path: str, resolution: str, cell_ids: list, range1: str,
 
 def hic_get_chrom_len(file_path: str, resolution: str, cell_id: str):
     gpath = os.path.join("resolutions", resolution)
-    hic_data_file_path = os.path.join(ROOT_DIR, "hic_data", file_path)
+    hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
+   
     len_chroms = []
     if not os.path.exists(hic_data_file_path):
         raise FileNotFoundError(
-            "No such file or directory with name: "+str(file_path))
+            "No such file or directory with name: "+str(hic_data_file_path))
     with h5py.File(hic_data_file_path, 'r') as hdf:
         # Get the group at the specified root path
         grp = hdf[gpath]
@@ -259,7 +262,8 @@ def hic_get_chrom_len(file_path: str, resolution: str, cell_id: str):
 
 def hic_get_embedding(file_path: str, resolution: str, embed_type: str):
     gpath = os.path.join("resolutions", resolution)
-    hic_data_file_path = os.path.join(ROOT_DIR, "hic_data", file_path)
+    hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
+    
    
     embed_vec = []
     if not os.path.exists(hic_data_file_path):
@@ -342,6 +346,7 @@ if __name__ == "__main__":
 
     root_path = Path(__file__).resolve().parent.parent.parent.parent
     file_path = str(root_path)+"/hic_data/Lee_et_al.h5"
+    
     visualize(file_path,"chrom1:0-200000000", "chrom1:0-200000000")
     """
     Test for Embedding
