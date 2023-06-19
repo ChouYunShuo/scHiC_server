@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 from pathlib import Path
 from decouple import config
 import os
+import mimetypes
+mimetypes.add_type("text/css", ".css", True)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -26,11 +28,9 @@ SECRET_KEY = config("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1', '128.2.220.67']
-
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=lambda v: [s.strip() for s in v.split(',')])
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -55,12 +55,13 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'hic_server.urls'
-
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:9000",
     "http://127.0.0.1:5173",
     "http://localhost:5173",
+    'http://localhost:8082',
+    'http://128.2.220.67:8082',
 ]
 
 TEMPLATES = [
@@ -93,24 +94,26 @@ DATABASES = {
 }
 
 # Use Sqlite3 for deployment on genome-dev server for now.
-'''
+
 DB_DATABASE = config("POSTGRES_DB")
 DB_USERNAME = config("POSTGRES_USER")
 DB_PASSWORD = config("POSTGRES_PASSWORD")
 DB_HOST = config("POSTGRES_HOST")
 DB_PORT = config("POSTGRES_PORT")
 
-DB_IS_AVAL = all([DB_DATABASE,
+DB_IS_AVAIL = all([DB_DATABASE,
                  DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT])
-POSTGRES_READY = config("POSTGRES_READY", default=False, cast=bool)
-'''
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if DB_IS_AVAIL:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": DB_DATABASE,
+            "USER": DB_USERNAME,
+            "PASSWORD": DB_PASSWORD,
+            "HOST": DB_HOST,
+            "PORT": DB_PORT,
+        }
     }
-}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators

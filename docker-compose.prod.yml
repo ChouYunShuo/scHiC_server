@@ -1,0 +1,58 @@
+version: "3.8"
+services:
+  django_prod:
+    build:
+      context: ./src
+      dockerfile: Dockerfile.prod
+    image: hic_server:prod
+    environment:
+      - PORT=8021
+    env_file:
+      - src/.env.prod
+    # ports:
+    #   - "8021:8021"
+    expose:
+      - 8021
+    networks:
+      - cellscope_network
+    volumes:
+      - ./hic_data:/app/api/hic/hic_data
+      - static_prod:/app/static/
+    command: sh -c "chmod +x /app/migrate.sh && sh /app/migrate.sh && /app/entrypoint.prod.sh"
+    depends_on:
+      - postgres_db_prod
+
+  postgres_db_prod:
+    image: postgres
+    restart: always
+    command: -p 5435
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data/
+    env_file:
+      - src/.env.prod
+    expose:
+      - 5435
+    networks:
+      - cellscope_network
+    ports:
+      - "5435:5435"
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8081:80" # Expose port 8081 for external access
+    networks:
+      - cellscope_network
+    depends_on:
+      - django_prod
+    volumes:
+      - ./src/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_prod:/etc/nginx/html/static/
+volumes:
+  postgres_data_prod:
+  static_prod:
+
+
+networks:
+  cellscope_network:
+    external: true
