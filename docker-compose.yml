@@ -9,15 +9,19 @@ services:
       - PORT=8020
     env_file:
       - src/.env
-    ports:
-      - "8020:8020"
+    expose:
+      - 8020
     volumes:
       - ./hic_data:/app/api/hic/hic_data
+      - static_prod:/app/static/
+    networks:
+      - nginx_network
+      - db_network
     command: sh -c "chmod +x /app/migrate.sh && sh /app/migrate.sh && /app/entrypoint.sh"
     depends_on:
       - postgres_db
 
-  postgres_db:
+  postgres_db_dev:
     image: postgres
     restart: always
     command: -p 5434
@@ -29,14 +33,25 @@ services:
       - 5434
     ports:
       - "5434:5434"
+    networks:
+      - db_network
 
-  nginx:
+  nginx_dev:
     image: nginx:latest
     ports:
       - "8080:80"
     volumes:
       - ./src/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_prod:/etc/nginx/html/static/
+    networks:
+      - nginx_network
 volumes:
-  # hic_data:
-  #   external: true
   postgres_data:
+  static_prod:
+
+
+networks:
+  nginx_network:
+    driver: bridge
+  db_network:
+    driver: bridge
