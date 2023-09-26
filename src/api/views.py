@@ -1,4 +1,4 @@
-from . hic.hic_visualizer import hic_fetch_maps, hic_fetch_map, hic_test_api, hic_get_chrom_len, hic_get_embedding
+from . hic.hic_visualizer import hic_fetch_maps, hic_fetch_map, hic_test_api, hic_get_chrom_len, hic_get_embedding, hic_get_spatial, hic_get_track
 from django.shortcuts import render, get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
@@ -21,7 +21,7 @@ class NumpyArrayEncoder(JSONEncoder):
             if np.issubdtype(obj.dtype, np.number):
                 return obj.tolist()
             elif np.issubdtype(obj.dtype, np.bytes_):
-                return obj.astype(str).tolist()
+                return obj.astype(np.unicode_).tolist()
         return JSONEncoder.default(self, obj)
 # Create your views here.
 
@@ -75,8 +75,6 @@ def embeddingView(request):
     logger.info(data)
 
     dataset = get_object_or_404(Dataset, name=data['dataset_name'])
-   
-
     try:
         resolution = data['resolution']
         embed_type = data['embed_type']
@@ -86,8 +84,40 @@ def embeddingView(request):
     except Exception as e:
         return Response({"invalid": str(e)}, status=400)
 
+@api_view(["POST"])
+def trackView(request):
+    data = request.data
+    logger.info(data)
 
+    dataset = get_object_or_404(Dataset, name=data['dataset_name'])
+    try:
+        resolution = data['resolution']
+        track_type = data['type']
+        cell_id = data['cell_id']
+        range1 = data['chrom1']
+        if(isinstance(cell_id, list)):
+            arr = hic_get_track(dataset.file_path, resolution, cell_id[0], range1, track_type)
+        else:
+            arr = hic_get_track(dataset.file_path, resolution, cell_id, range1, track_type)
+        json_array = json.dumps(arr, cls=NumpyArrayEncoder)
+        return Response(json_array)
+    except Exception as e:
+        return Response({"invalid": str(e)}, status=400)
 
+@api_view(["POST"])
+def spatialView(request):
+    data = request.data
+    logger.info(data)
+
+    dataset = get_object_or_404(Dataset, name=data['dataset_name'])
+    try:
+        resolution = data['resolution']
+        gene_name = data['gene_name']
+        arr = hic_get_spatial(dataset.file_path, resolution, gene_name)
+        json_array = json.dumps(arr, cls=NumpyArrayEncoder)
+        return Response(json_array)
+    except Exception as e:
+        return Response({"invalid": str(e)}, status=400)
 
 class scHicTestView(APIView):
     def post(self, request):
