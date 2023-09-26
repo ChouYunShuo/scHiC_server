@@ -62,6 +62,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     'http://localhost:8082',
     'http://128.2.220.67:8082',
+    'http://cellscope.nucleome.org:8082'
 ]
 
 TEMPLATES = [

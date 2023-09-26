@@ -17,7 +17,7 @@ import logging
 import hicstraw
 import time
 import concurrent.futures
-import psutil
+from .utils import rlencode #need . to import from same dir
 
 logger = logging.getLogger('django')
 matplotlib.use('Agg')
@@ -173,6 +173,42 @@ def query(h5, i0, i1, j0, j1, field="count") -> Tuple:
 FIGURE_WIDTH = 11
 FIGURE_HEIGHT = 10
 
+def fetch_spatial(file_path,gpath,gene_name):
+    with h5py.File(file_path, 'r') as hdf:
+        # Get the res group at the specified root path
+        grp = hdf[gpath]
+        
+        coords = grp["spatial"].get("coords") 
+        gene_expr =  grp["spatial"].get(gene_name)
+        spatial_vec = np.column_stack((np.array(coords, dtype=np.float32), np.array(gene_expr)))
+
+        return spatial_vec
+def fetch_insulation(file_path, gpath, res, cell_id, range1):
+    with h5py.File(file_path, 'r') as hdf:
+        # Get the resolution group, should have ['bins', 'cells', 'chroms', 'embed', 'insulation', 'spatial']
+        grp = hdf[gpath]
+        if "insulation" not in grp:
+            raise ValueError("track type: insulation does not exist in dataset")
+        
+        n_chroms = len(np.unique(grp["insulation/bin/chrom"]))
+        n_bins = len(grp["insulation/bin/chrom"])
+        chrom_ids = grp["insulation/bin/chrom"]
+        data = grp["insulation/cell_"+str(cell_id)][...]
+        chrom_offset = np.zeros(n_chroms + 1, dtype=np.int32)
+        index = 0
+        for start, length, value in zip(*rlencode(chrom_ids)):
+            chrom_offset[index] = start
+            index += 1
+        chrom_offset[index] = n_bins
+
+        chrom, start ,end = parse_region(range1)
+        
+        chr_idx = int(chrom[5:])-1
+        start_idx = chrom_offset[chr_idx]+int(start)//res
+        end_idx = chrom_offset[chr_idx]+int(end)//res
+    
+        temp = [None if np.isnan(x) else x for x in data[start_idx:end_idx]]
+        return temp
 
 def hic_fetch_map(file_path: str, resolution: str, cell_id: str, range1: str, range2: str):
     # Construct the file path for the hic data and the gpath
@@ -285,10 +321,33 @@ def hic_get_embedding(file_path: str, resolution: str, embed_type: str):
         embed_vec = np.column_stack((np.array(vec, dtype=np.float32), np.array(cell_type)))
     return embed_vec
         
+def hic_get_spatial(file_path: str, resolution: str, gene_name: str):
+    gpath = os.path.join("resolutions", resolution)
+    hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
+   
+    spatial_vec = []
+    if not os.path.exists(hic_data_file_path):
+        raise FileNotFoundError(
+            "No such file or directory with name: "+str(file_path))
+    spatial_vec = fetch_spatial(hic_data_file_path, gpath,gene_name)
+
+    return spatial_vec
+
+def hic_get_track(file_path: str, resolution: str, cell_id: str, range1: str, track_type: str):
+    gpath = os.path.join("resolutions", resolution)
+    hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
+    if not os.path.exists(hic_data_file_path):
+        raise FileNotFoundError(
+            "No such file or directory with name: "+str(file_path))
+    if not is_valid_region_string(range1):
+        raise ValueError("Request query string not valid: "+str(range1))
+    if track_type == 'insulation':
+        return fetch_insulation(hic_data_file_path, gpath, int(resolution), cell_id,range1)
+    
+    return []
 
 def hic_test_api(resolution: str, range1: str, range2: str):
-    root_dir = Path(__file__).resolve().parent.parent.parent.parent
-    hic_path = str(root_dir)+"/hic_data/ENCFF718AWL.hic"
+    hic_path = os.path.join(DATA_DIR, "hic_data", "ENCFF718AWL.hic")
     hic = hicstraw.HiCFile(hic_path)
     if not is_valid_region_string(range1):
         raise ValueError("Request query string not valid: "+str(range1))
@@ -317,7 +376,7 @@ def visualize(fpath, range1, range2):
 
     # future 2: check matrix size
     #file_path, root_path, cell_id
-    cnt = 1000
+    cnt = 1
     cell_ids = [str(i) for i in range(cnt)]
 
     start_time = time.time()
@@ -347,7 +406,7 @@ if __name__ == "__main__":
     root_path = Path(__file__).resolve().parent.parent.parent.parent
     file_path = str(root_path)+"/hic_data/Lee_et_al.h5"
     
-    visualize(file_path,"chrom1:0-200000000", "chrom1:0-200000000")
+    visualize(file_path,"chrom2:18502478-92984649", "chrom2:8461179-82943350")
     """
     Test for Embedding
     with h5py.File(file_path, 'r') as hdf:
@@ -373,6 +432,5 @@ if __name__ == "__main__":
             ax.legend(handles=handles, labels=labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., ncol=1)
             plt.tight_layout()
             plt.savefig("embed.png")
-
     """
     
