@@ -1,6 +1,6 @@
 version: "3.8"
 services:
-  web:
+  django_dev:
     build:
       context: ./src
       dockerfile: Dockerfile
@@ -10,18 +10,17 @@ services:
     env_file:
       - src/.env
     expose:
-      - 8020
+      - 8019
     volumes:
       - ./hic_data:/app/api/hic/hic_data
-      - static_prod:/app/static/
+      - static_dev:/app/static/
     networks:
-      - nginx_network
-      - db_network
+      - cellscope_network
     command: sh -c "chmod +x /app/migrate.sh && sh /app/migrate.sh && /app/entrypoint.sh"
     depends_on:
       - postgres_db
 
-  postgres_db_dev:
+  postgres_db:
     image: postgres
     restart: always
     command: -p 5434
@@ -34,24 +33,24 @@ services:
     ports:
       - "5434:5434"
     networks:
-      - db_network
+      - cellscope_network
 
   nginx_dev:
     image: nginx:latest
     ports:
-      - "8080:80"
+      - "8020:80"
+    depends_on:
+      - django_dev
     volumes:
       - ./src/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - static_prod:/etc/nginx/html/static/
+      - static_dev:/etc/nginx/html/static/
     networks:
-      - nginx_network
+      - cellscope_network
 volumes:
   postgres_data:
-  static_prod:
+  static_dev:
 
 
 networks:
-  nginx_network:
-    driver: bridge
-  db_network:
-    driver: bridge
+  cellscope_network:
+    external: true
