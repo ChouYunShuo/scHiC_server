@@ -380,7 +380,7 @@ def visualize(fpath, range1, range2):
     cell_ids = [str(i) for i in range(cnt)]
 
     start_time = time.time()
-    arr = hic_fetch_maps(fpath,"500000",cell_ids,range1, range2, True)
+    arr = hic_fetch_maps(fpath,"100000",cell_ids,range1, range2, True)
     end_time = time.time()
     print(f"Runtime: {end_time - start_time} seconds")
 
@@ -404,9 +404,9 @@ if __name__ == "__main__":
     #hic_get_chrom_len('scHiC5.h5', '50000', '0')
 
     root_path = Path(__file__).resolve().parent.parent.parent.parent
-    file_path = str(root_path)+"/hic_data/Lee_et_al.h5"
+    file_path = str(root_path)+"/hic_data/mouse2_slice99.h5"
     
-    visualize(file_path,"chrom2:18502478-92984649", "chrom2:8461179-82943350")
+    visualize(file_path,"chrom1:0-19515427", "chrom1:0-19515427")
     """
     Test for Embedding
     with h5py.File(file_path, 'r') as hdf:
