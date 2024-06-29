@@ -30,7 +30,7 @@ REDMAP = LinearSegmentedColormap.from_list(
 
 def parse_region(range: str) -> Tuple:
     """
-        range: chrom1:10000000-20000000
+        range: chr1:10000000-20000000
     """
 
     # future1: do checking on valid string
@@ -48,7 +48,7 @@ def is_valid_region_string(region_string):
     :return: A boolean indicating whether the string is in the correct format
     """
     pattern = re.compile(
-        r"^chrom([1-9]|1[0-9]|2[0-3]|X|Y):([0-9][0-9]*)-([1-9][0-9]*)$")
+        r"^chr([1-9]|1[0-9]|2[0-3]|X|Y):([0-9][0-9]*)-([1-9][0-9]*)$")
     match = pattern.match(region_string)
     if match:
         start, end = float(match.group(2)), float(match.group(3))
@@ -61,7 +61,7 @@ def get_chrom_ids(name_chroms):
     chrom_ids = {}
     id = 0
     for n in name_chroms:
-        chrom_ids["chrom"+n.astype(str)] = id
+        chrom_ids["chr"+n.astype(str)] = id
         id += 1
 
     return chrom_ids
@@ -71,7 +71,7 @@ def get_chrom_dict(name_chroms, size_chroms):
 
     chrom_dict = {}
     for n, s in zip(name_chroms, size_chroms):
-        chrom_dict["chrom"+n.astype(str)] = s
+        chrom_dict["chr"+n.astype(str)] = s
 
     return chrom_dict
 
@@ -106,7 +106,7 @@ def fetch(file_path, root_path, cell_id, region1, region2):
     with h5py.File(file_path, 'r') as hdf:
         # Get the group at the specified root path
         grp = hdf[root_path]
-        cell_grp = grp.get("cells/cell_id"+str(cell_id))
+        cell_grp = grp.get("cells/cell_"+str(cell_id))
         # Get the array of chromosome names
         name_chroms = np.array(grp["chroms"].get("name"))
         # Get the chromosome IDs for each region
@@ -146,10 +146,11 @@ def query(h5, i0, i1, j0, j1, field="count") -> Tuple:
     """
     i, j, v = [], [], []
 
-    edges = h5["indexes"]["bin1_offset"][i0: i1 + 1]
-    data = h5["pixels"][field]
-    p0, p1 = edges[0], edges[-1]
-    all_bin2 = h5["pixels"]["bin2_id"][p0:p1]
+    #edges = h5["indexes"]["bin1_offset"][i0: i1 + 1]
+    edges = h5["indexes"]["raw_bin1_offset"][i0: i1 + 1]
+    data = h5["raw"][field] ## pixels
+    p0, p1 = edges[0], edges[-1]  
+    all_bin2 = h5["raw"]["bin2_id"][p0:p1] ## pixels
     all_data = data[p0:p1]
     dtype = all_bin2.dtype
     for row_id, lo, hi in zip(
@@ -173,41 +174,28 @@ def query(h5, i0, i1, j0, j1, field="count") -> Tuple:
 FIGURE_WIDTH = 11
 FIGURE_HEIGHT = 10
 
-def fetch_spatial(file_path,gpath,gene_name):
+def fetch_spatial(file_path):
     with h5py.File(file_path, 'r') as hdf:
-        # Get the res group at the specified root path
-        grp = hdf[gpath]
-        
-        coords = grp["spatial"].get("coords") 
-        gene_expr =  grp["spatial"].get(gene_name)
-        spatial_vec = np.column_stack((np.array(coords, dtype=np.float32), np.array(gene_expr)))
-
-        return spatial_vec
-def fetch_insulation(file_path, gpath, res, cell_id, range1):
+        # Get the res group at the specified root path   
+        coords = hdf["spatial"].get("coords") 
+        return np.array(coords, dtype=np.float32)
+    
+def fetch_track(file_path, gpath, track_type, res, cell_id, range1):
     with h5py.File(file_path, 'r') as hdf:
-        # Get the resolution group, should have ['bins', 'cells', 'chroms', 'embed', 'insulation', 'spatial']
+        # Get the cell_id group, should have ['pixles', 'indexes', 'ab_score', 'insul_score', 'insulation', 'spatial']
         grp = hdf[gpath]
-        if "insulation" not in grp:
-            raise ValueError("track type: insulation does not exist in dataset")
+        if track_type not in grp:
+            raise ValueError(f"track type: {track_type} does not exist in dataset")
         
-        n_chroms = len(np.unique(grp["insulation/bin/chrom"]))
-        n_bins = len(grp["insulation/bin/chrom"])
-        chrom_ids = grp["insulation/bin/chrom"]
-        data = grp["insulation/cell_"+str(cell_id)][...]
-        chrom_offset = np.zeros(n_chroms + 1, dtype=np.int32)
-        index = 0
-        for start, length, value in zip(*rlencode(chrom_ids)):
-            chrom_offset[index] = start
-            index += 1
-        chrom_offset[index] = n_bins
-
+        data = grp[track_type][...]
+        chrom_offset = grp.parent["indexes/chrom_offset"]
         chrom, start ,end = parse_region(range1)
         
-        chr_idx = int(chrom[5:])-1
+        chr_idx = int(chrom[3:])-1
         start_idx = chrom_offset[chr_idx]+int(start)//res
         end_idx = chrom_offset[chr_idx]+int(end)//res
     
-        temp = [None if np.isnan(x) else x for x in data[start_idx:end_idx]]
+        temp = [None if np.isnan(x) else float(x) for x in data[start_idx:end_idx]]
         return temp
 
 def hic_fetch_map(file_path: str, resolution: str, cell_id: str, range1: str, range2: str):
@@ -296,55 +284,71 @@ def hic_get_chrom_len(file_path: str, resolution: str, cell_id: str):
 
     return len_chroms
 
-def hic_get_embedding(file_path: str, resolution: str, embed_type: str):
-    gpath = os.path.join("resolutions", resolution)
+def hic_get_gene_expr(file_path: str, idx: int):
     hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
-    
-   
-    embed_vec = []
     if not os.path.exists(hic_data_file_path):
-        
+        raise FileNotFoundError(
+            "No such file or directory with name: "+str(file_path)) 
+    with h5py.File(hic_data_file_path, 'r') as hdf:
+        num_genes = len(hdf["gene_expr"])
+        if idx < 0 or idx >= num_genes:
+            raise IndexError("Index out of range. It must be between 0 and {}.".format(num_genes - 1))
+        return np.array(hdf["gene_expr"][str(idx)])
+
+def hic_get_meta(file_path: str, meta_type: str):
+    hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
+
+    meta_vec = []
+    if not os.path.exists(hic_data_file_path):
         raise FileNotFoundError(
             "No such file or directory with name: "+str(file_path))
     
     with h5py.File(hic_data_file_path, 'r') as hdf:
-        
-        # Get the res group at the specified root path
-        grp = hdf[gpath]
+        if(meta_type not in list(hdf["meta"])):
+            raise ValueError("Request meta type not exist: "+str(meta_type))
+        if meta_type== "label":
+            vec = hdf["meta"].get("label") 
+        meta_vec = np.array(vec)
+    return meta_vec
+
+def hic_get_embedding(file_path: str, embed_type: str):
+    hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
+
+    embed_vec = []
+    if not os.path.exists(hic_data_file_path):
+        raise FileNotFoundError(
+            "No such file or directory with name: "+str(file_path))
+    
+    with h5py.File(hic_data_file_path, 'r') as hdf:
         if embed_type== "pca":
-            vec = grp["embed"].get("pca") 
+            vec = hdf["embed"].get("pca") 
         else:
-            vec = grp["embed"].get("umap") 
+            vec = hdf["embed"].get("umap") 
+        embed_vec = np.array(vec, dtype=np.float32)
 
-        cell_type =  grp["embed"].get("label")
-
-        embed_vec = np.column_stack((np.array(vec, dtype=np.float32), np.array(cell_type)))
     return embed_vec
         
-def hic_get_spatial(file_path: str, resolution: str, gene_name: str):
-    gpath = os.path.join("resolutions", resolution)
+def hic_get_spatial(file_path: str):
     hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
    
     spatial_vec = []
     if not os.path.exists(hic_data_file_path):
         raise FileNotFoundError(
             "No such file or directory with name: "+str(file_path))
-    spatial_vec = fetch_spatial(hic_data_file_path, gpath,gene_name)
+    spatial_vec = fetch_spatial(hic_data_file_path)
 
     return spatial_vec
 
 def hic_get_track(file_path: str, resolution: str, cell_id: str, range1: str, track_type: str):
-    gpath = os.path.join("resolutions", resolution)
+    gpath = os.path.join("resolutions", resolution, f"cells/cell_{cell_id}/tracks") # path resolutions/{resolution}/cells/cell_id{cell_id}/track_type
     hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
     if not os.path.exists(hic_data_file_path):
         raise FileNotFoundError(
             "No such file or directory with name: "+str(file_path))
     if not is_valid_region_string(range1):
         raise ValueError("Request query string not valid: "+str(range1))
-    if track_type == 'insulation':
-        return fetch_insulation(hic_data_file_path, gpath, int(resolution), cell_id,range1)
     
-    return []
+    return fetch_track(hic_data_file_path, gpath, track_type, int(resolution), cell_id,range1)
 
 def hic_test_api(resolution: str, range1: str, range2: str):
     hic_path = os.path.join(DATA_DIR, "hic_data", "ENCFF718AWL.hic")
@@ -357,7 +361,7 @@ def hic_test_api(resolution: str, range1: str, range2: str):
     col_chrom, col_lo, col_hi = parse_region(range2)
 
     mzd = hic.getMatrixZoomData(
-        row_chrom[5:], col_chrom[5:], "observed", "KR", "BP", int(resolution))
+        row_chrom[3:], col_chrom[3:], "observed", "KR", "BP", int(resolution))
     arr = mzd.getRecordsAsMatrix(
         int(row_lo), int(row_hi), int(col_lo), int(col_hi))
     arr = np.log2(arr+1)
