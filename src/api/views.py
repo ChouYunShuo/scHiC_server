@@ -35,16 +35,18 @@ class scHicQueryView(APIView):
         cell_id = data['cell_id']
         range1 = data['chrom1']
         range2 = data['chrom2']
-        logger.info([data['dataset_name'],data['resolution'],data['chrom1'],data['chrom2']])
+        logger.info([data['dataset_name'], data['resolution'],
+                    data['chrom1'], data['chrom2']])
 
         try:
             start_time = time.time()
-            if(isinstance(cell_id, list)):
+            if (isinstance(cell_id, list)):
                 logger.info(len(cell_id))
-                arr = hic_fetch_maps(dataset.file_path, resolution, cell_id, range1, range2, True)
+                arr = hic_fetch_maps(
+                    dataset.file_path, resolution, cell_id, range1, range2, True)
             else:
                 arr = hic_fetch_map(dataset.file_path, resolution,
-                            cell_id, range1, range2)
+                                    cell_id, range1, range2)
             end_time = time.time()
             json_array = json.dumps(arr, cls=NumpyArrayEncoder)
             logger.info(f"Runtime: {end_time - start_time} seconds")
@@ -64,15 +66,15 @@ def chromLenView(request):
     try:
         arr = hic_get_chrom_len(dataset.file_path, resolution, cell_id)
         json_array = json.dumps(arr, cls=NumpyArrayEncoder)
-        #logger.info(json_array)
         return Response(json_array)
     except Exception as e:
         return Response({"invalid": str(e)}, status=400)
-    
+
+
 @api_view(["POST"])
 def embeddingView(request):
     data = request.data
-    logger.info(data)
+    # logger.info(data)
 
     dataset = get_object_or_404(Dataset, name=data['dataset_name'])
     try:
@@ -83,10 +85,11 @@ def embeddingView(request):
     except Exception as e:
         return Response({"invalid": str(e)}, status=400)
 
+
 @api_view(["POST"])
 def metaView(request):
     data = request.data
-    logger.info(data)
+    # logger.info(data)
 
     dataset = get_object_or_404(Dataset, name=data['dataset_name'])
     try:
@@ -102,7 +105,7 @@ def metaView(request):
 @api_view(["POST"])
 def spatialView(request):
     data = request.data
-    logger.info(data)
+    # logger.info(data)
     dataset = get_object_or_404(Dataset, name=data['dataset_name'])
     try:
         arr = hic_get_spatial(dataset.file_path)
@@ -111,10 +114,11 @@ def spatialView(request):
     except Exception as e:
         return Response({"invalid": str(e)}, status=400)
 
+
 @api_view(["POST"])
 def geneExprView(request):
     data = request.data
-    logger.info(data)
+    # logger.info(data)
 
     dataset = get_object_or_404(Dataset, name=data['dataset_name'])
     try:
@@ -124,11 +128,12 @@ def geneExprView(request):
         return Response(json_array)
     except Exception as e:
         return Response({"invalid": str(e)}, status=400)
-    
+
+
 @api_view(["POST"])
 def trackView(request):
     data = request.data
-    logger.info(data)
+    # logger.info(data)
 
     dataset = get_object_or_404(Dataset, name=data['dataset_name'])
     try:
@@ -136,10 +141,12 @@ def trackView(request):
         track_type = data['type']
         cell_id = data['cell_id']
         range1 = data['chrom1']
-        if(isinstance(cell_id, list)):
-            arr = hic_get_track(dataset.file_path, resolution, cell_id[0], range1, track_type)
+        if (isinstance(cell_id, list)):
+            arr = hic_get_track(dataset.file_path, resolution,
+                                cell_id[0], range1, track_type)
         else:
-            arr = hic_get_track(dataset.file_path, resolution, cell_id, range1, track_type)
+            arr = hic_get_track(dataset.file_path, resolution,
+                                cell_id, range1, track_type)
         json_array = json.dumps(arr, cls=NumpyArrayEncoder)
         return Response(json_array)
     except Exception as e:

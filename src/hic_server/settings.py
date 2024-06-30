@@ -28,7 +28,8 @@ SECRET_KEY = config("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=lambda v: [
+                       s.strip() for s in v.split(',')])
 
 # Application definition
 INSTALLED_APPS = [
@@ -103,7 +104,7 @@ DB_HOST = config("POSTGRES_HOST")
 DB_PORT = config("POSTGRES_PORT")
 
 DB_IS_AVAIL = all([DB_DATABASE,
-                 DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT])
+                   DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT])
 if DB_IS_AVAIL:
     DATABASES = {
         "default": {
