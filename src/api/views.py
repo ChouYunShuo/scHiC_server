@@ -1,4 +1,4 @@
-from . hic.hic_visualizer import hic_fetch_maps, hic_fetch_map, hic_test_api, hic_get_chrom_len, hic_get_embedding, hic_get_spatial, hic_get_track, hic_get_meta, hic_get_gene_expr
+from . hic.hic_visualizer import hic_fetch_maps, hic_fetch_map, hic_get_chrom_len, hic_get_embedding, hic_get_spatial, hic_get_track, hic_get_meta, hic_get_gene_expr
 from django.shortcuts import render, get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
@@ -122,8 +122,8 @@ def geneExprView(request):
 
     dataset = get_object_or_404(Dataset, name=data['dataset_name'])
     try:
-        idx = data['index']
-        arr = hic_get_gene_expr(dataset.file_path, int(idx))
+        name = data['name']
+        arr = hic_get_gene_expr(dataset.file_path, name)
         json_array = json.dumps(arr, cls=NumpyArrayEncoder)
         return Response(json_array)
     except Exception as e:
@@ -151,23 +151,6 @@ def trackView(request):
         return Response(json_array)
     except Exception as e:
         return Response({"invalid": str(e)}, status=400)
-
-
-class scHicTestView(APIView):
-    def post(self, request):
-        data = request.data
-        logger.info(data)
-
-        resolution = data['resolution']
-        range1 = data['chrom1']
-        range2 = data['chrom2']
-        try:
-            arr = hic_test_api(resolution, range1, range2)
-            json_array = json.dumps(arr, cls=NumpyArrayEncoder)
-            return Response(json_array)
-        except Exception as e:
-            return Response({"invalid": str(e)}, status=400)
-
 
 class DatasetListAPIView(generics.ListAPIView):
     queryset = Dataset.objects.all()
