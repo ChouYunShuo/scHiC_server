@@ -4,8 +4,9 @@ import h5py
 import numpy as np
 import logging
 import concurrent.futures
+import json
 
-from .utils import parse_region, is_valid_region_string, fetch
+from .utils import parse_region, is_valid_region_string, fetch, fetch_group_id_by_name, fetch_group
 logger = logging.getLogger('django')
 
 DATA_DIR = Path(__file__).resolve().parent
@@ -69,6 +70,32 @@ def hic_fetch_map(file_path: str, resolution: str, cell_id: str, range1: str, ra
 
     return norm_arr
 
+def hic_fetch_group(file_path: str, resolution: str, group_name: str, range1: str, range2: str):
+    # Construct the file path for the hic data and the gpath
+    gpath = os.path.join("resolutions", resolution)
+    hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
+    
+    if not os.path.exists(hic_data_file_path):
+        raise FileNotFoundError(
+            "No such file or directory with name: "+str(file_path))
+    # Check and get chrom, lo, and hi values for range1 and range2
+    if not is_valid_region_string(range1):
+        raise ValueError("Request query string not valid: "+str(range1))
+    if not is_valid_region_string(range2):
+        raise ValueError("Request query string not valid: "+str(range2))
+
+    # Check matrix size
+
+    # Get Group ID by group name
+    group_id = fetch_group_id_by_name(hic_data_file_path,"meta/group_label",group_name)
+    logger.info(group_id)
+    # Fetch the data from the file path and gpath
+    arr = fetch_group(hic_data_file_path, gpath, group_id, range1, range2)
+    # Apply log2 transformation to the data
+    arr = np.log2(arr+1)
+    norm_arr = (arr-np.min(arr))/(np.max(arr)-np.min(arr))
+
+    return norm_arr
 
 def fetch_and_add(hic_data_file_path, gpath, id, range1, range2):
     return fetch(hic_data_file_path, gpath, id, range1, range2)
@@ -131,6 +158,12 @@ def hic_get_chrom_len(file_path: str, resolution: str, cell_id: str):
 
     return len_chroms
 
+def hic_get_gene_idx_by_name(gene_names, name):
+    try:
+        name_bytes = name.encode('utf-8')
+        return np.where(gene_names == name_bytes)[0][0]
+    except IndexError:
+        raise ValueError(f"Gene name {name} not found.")
 
 def hic_get_gene_expr(file_path: str, name: str):
     hic_data_file_path = os.path.join(DATA_DIR, "hic_data", file_path)
@@ -138,10 +171,21 @@ def hic_get_gene_expr(file_path: str, name: str):
         raise FileNotFoundError(
             "No such file or directory with name: "+str(file_path))
     with h5py.File(hic_data_file_path, 'r') as hdf:
-        if name not in hdf["gene_expr"].keys():
+        if "gene_names" not in hdf["meta"].keys():
+            raise IndexError(
+                "gene_names not found in meta")
+        if "gene_expr_data" not in hdf["gene_expr"].keys():
+            raise IndexError(
+                "gene_expr_data not found in gene_expr")
+
+        gene_names = np.array(hdf["meta"]["gene_names"])
+        idx = hic_get_gene_idx_by_name(gene_names, name)
+        gene_exprs = np.array(hdf["gene_expr/gene_expr_data"])
+        
+        if idx >= gene_exprs.shape[0]:
             raise IndexError(
                 "Gene name {} is invalid.".format(name))
-        return np.array(hdf["gene_expr"][name])
+        return np.array(gene_exprs[idx])
 
 
 def hic_get_meta(file_path: str, meta_type: str):
@@ -155,8 +199,8 @@ def hic_get_meta(file_path: str, meta_type: str):
     with h5py.File(hic_data_file_path, 'r') as hdf:
         if (meta_type not in list(hdf["meta"])):
             raise ValueError("Request meta type not exist: "+str(meta_type))
-        if meta_type == "label":
-            vec = hdf["meta"].get("label")
+        if meta_type == "cell_label":
+            vec = hdf["meta"].get("cell_label")
         meta_vec = np.array(vec)
     return meta_vec
 
@@ -202,3 +246,10 @@ def hic_get_track(file_path: str, resolution: str, cell_id: str, range1: str, tr
         raise ValueError("Request query string not valid: "+str(range1))
 
     return fetch_track(hic_data_file_path, gpath, track_type, int(resolution), cell_id, range1)
+
+def hic_get_session_json(file_path: str):
+    json_file_path = os.path.join(DATA_DIR, "session", file_path)
+    with open(json_file_path, 'r') as json_file:
+        data = json.load(json_file)
+    
+    return data
