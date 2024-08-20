@@ -109,8 +109,47 @@ def fetch(file_path, root_path, cell_id, region1, region2):
         arr = coo_matrix((v, (i - i0, j - j0)),
                          shape=(i1 - i0, j1 - j0)).toarray()
         return arr
+def fetch_group_id_by_name(file_path, root_path, group_name):
+    group_id = 0
+    with h5py.File(file_path, 'r') as hdf:
+        group= np.array(hdf[root_path])
+        byte_name = group_name.encode('utf-8')
+        try:
+            group_id = np.where(group == byte_name)[0][0]
+        except ValueError:
+            raise ValueError("Request group name not exist: "+group_name)
+    return group_id
+def fetch_group(file_path, root_path, group_id, region1, region2):
+    # Open an HDF5 file for reading using h5py
+    with h5py.File(file_path, 'r') as hdf:
+        # Get the group at the specified root path
+        grp = hdf[root_path]
+        # FIXME
+        cell_grp = grp.get("layers/imputed_0neighbor/group/group_"+str(group_id))
+        # Get the array of chromosome names
+        name_chroms = np.array(grp["chroms"].get("name"))
+        # Get the chromosome IDs for each region
+        chromids = get_chrom_ids(name_chroms)
 
+        region1 = parse_region(region1)
+        region2 = parse_region(region2)
 
+        # Get the extent of the first region in the group
+        i0, i1 = region_to_extent(grp, cell_grp, chromids, region1)
+        # Get the extent of the second region in the group
+        j0, j1 = region_to_extent(grp, cell_grp, chromids, region2)
+
+        # Perform a query on the group to get the values at the specified extent
+        i, j, v = query(cell_grp, i0, i1, j0, j1)
+
+        # Check if i, j, and v have data
+        if not i.size or not j.size or not v.size:
+            raise ValueError("No data found for the specified regions.")
+
+        # Return a dense array created from the sparse coo_matrix
+        arr = coo_matrix((v, (i - i0, j - j0)),
+                         shape=(i1 - i0, j1 - j0)).toarray()
+        return arr
 def query(h5, i0, i1, j0, j1, field="count") -> Tuple:
     """
     Retrieve data from an HDF5 file for a specified range of rows and columns.
