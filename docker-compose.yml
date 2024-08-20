@@ -13,6 +13,7 @@ services:
       - 8019
     volumes:
       - ./hic_data:/app/api/hic/hic_data
+      - ./session:/app/api/hic/session
       - static_dev:/app/static/
     networks:
       - cellscope_network
