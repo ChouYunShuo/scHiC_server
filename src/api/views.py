@@ -1,4 +1,4 @@
-from . hic.hic_visualizer import hic_fetch_maps, hic_fetch_map, hic_get_chrom_len, hic_get_embedding, hic_get_spatial, hic_get_track, hic_get_meta, hic_get_gene_expr
+from . hic.hic_visualizer import hic_fetch_maps,hic_fetch_group, hic_fetch_map, hic_get_chrom_len, hic_get_embedding, hic_get_spatial, hic_get_track, hic_get_meta, hic_get_gene_expr, hic_get_session_json
 from django.shortcuts import render, get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
@@ -32,15 +32,19 @@ class scHicQueryView(APIView):
 
         dataset = get_object_or_404(Dataset, name=data['dataset_name'])
         resolution = data['resolution']
-        cell_id = data['cell_id']
+        cell_id = data.get('cell_id', None)
+        cell_type = data.get('cell_type', None)  
         range1 = data['chrom1']
         range2 = data['chrom2']
-        logger.info([data['dataset_name'], data['resolution'],
-                    data['chrom1'], data['chrom2']])
+        logger.info([data['dataset_name'], resolution,cell_id,cell_type,
+                    range1, range2])
 
         try:
             start_time = time.time()
-            if (isinstance(cell_id, list)):
+            if cell_type != "":
+                arr = hic_fetch_group(
+                    dataset.file_path, resolution, cell_type, range1, range2)
+            elif (isinstance(cell_id, list)):
                 logger.info(len(cell_id))
                 arr = hic_fetch_maps(
                     dataset.file_path, resolution, cell_id, range1, range2, True)
@@ -152,10 +156,14 @@ def trackView(request):
     except Exception as e:
         return Response({"invalid": str(e)}, status=400)
 
-class DatasetListAPIView(generics.ListAPIView):
-    queryset = Dataset.objects.all()
-    serializer_class = DatasetSerializer
-
+@api_view(["GET"])
+def session_retreive_view(request, uuid):
+    obj = get_object_or_404(Session, pk=uuid)
+    data = SessionSerializer(obj, many=False).data
+    file_path = data['file_path']
+    logger.info(uuid,file_path)
+    session_json = hic_get_session_json(file_path)
+    return Response(session_json)
 
 @api_view(["GET"])
 def dataset_retreive_view(request, pk=None, *args, **kwargs):
