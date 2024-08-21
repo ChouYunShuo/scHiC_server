@@ -1,4 +1,4 @@
-from . hic.hic_visualizer import hic_fetch_maps,hic_fetch_group, hic_fetch_map, hic_get_chrom_len, hic_get_embedding, hic_get_spatial, hic_get_track, hic_get_meta, hic_get_gene_expr, hic_get_session_json
+from . hic.hic_visualizer import hic_fetch_maps,hic_fetch_group, hic_fetch_map, hic_get_chrom_len, hic_get_embedding, hic_get_spatial, hic_get_track, hic_get_meta, hic_get_gene_expr, hic_get_session_json,hic_upload_session_json
 from django.shortcuts import render, get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
@@ -164,6 +164,21 @@ def session_retreive_view(request, uuid):
     logger.info(uuid,file_path)
     session_json = hic_get_session_json(file_path)
     return Response(session_json)
+
+@api_view(["POST"])
+def session_upload_view(request):
+    data = request.data
+    try:
+        config = data['config']
+        file_name = data['file_name']
+        logger.info(config, file_name)
+        session_uuid = hic_upload_session_json(config, file_name)
+        return Response({"session_uuid": session_uuid})
+    except Exception as e:
+        return Response({"invalid": str(e)}, status=400)
+
+    
+
 
 @api_view(["GET"])
 def dataset_retreive_view(request, pk=None, *args, **kwargs):
