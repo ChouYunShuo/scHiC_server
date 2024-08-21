@@ -22,7 +22,7 @@ services:
       - postgres_db
 
   postgres_db:
-    image: postgres
+    image: postgres:15
     restart: always
     command: -p 5434
     volumes:
