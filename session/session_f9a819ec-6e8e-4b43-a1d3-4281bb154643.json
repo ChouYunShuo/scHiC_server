@@ -1,0 +1,241 @@
+{
+    "heatMapState": {
+        "dataset_name": "Lee_et_al",
+        "resolution": "500000",
+        "app_size": 500,
+        "contact_map_size": 400,
+        "pix_size": 2,
+        "map_cnts": 4,
+        "query": {
+            "chrom1": "chr2:0-100000000",
+            "chrom2": "chr2:0-100000000"
+        },
+        "track_type": "insul_score",
+        "all_resolution": [],
+        "chrom_lengths": [
+            249250621,
+            243199373,
+            198022430,
+            191154276,
+            180915260,
+            171115067,
+            159138663,
+            146364022,
+            141213431,
+            135534747,
+            135006516,
+            133851895,
+            115169878,
+            107349540,
+            102531392,
+            90354753,
+            81195210,
+            78077248,
+            59128983,
+            63025520,
+            48129895,
+            51304566
+        ],
+        "apiCalls": [
+            {
+                "id": 0,
+                "selectedCells": [
+                    "0"
+                ],
+                "selectedCellType": "",
+                "query": {
+                    "chrom1": "chr2:0-100000000",
+                    "chrom2": "chr2:0-100000000"
+                },
+                "showChromPos": false,
+                "selectRegion": false
+            },
+            {
+                "id": 1,
+                "selectedCells": [
+                    "1"
+                ],
+                "selectedCellType": "",
+                "query": {
+                    "chrom1": "chr2:0-100000000",
+                    "chrom2": "chr2:0-100000000"
+                },
+                "showChromPos": false,
+                "selectRegion": false
+            },
+            {
+                "id": 2,
+                "selectedCells": [
+                    "2"
+                ],
+                "selectedCellType": "",
+                "query": {
+                    "chrom1": "chr2:0-100000000",
+                    "chrom2": "chr2:0-100000000"
+                },
+                "showChromPos": false,
+                "selectRegion": false
+            },
+            {
+                "id": 3,
+                "selectedCells": [
+                    "3"
+                ],
+                "selectedCellType": "",
+                "query": {
+                    "chrom1": "chr2:0-100000000",
+                    "chrom2": "chr2:0-100000000"
+                },
+                "showChromPos": false,
+                "selectRegion": false
+            }
+        ],
+        "selectRect": {
+            "isVisible": false,
+            "startX": 0,
+            "startY": 0,
+            "endX": 0,
+            "endY": 0
+        },
+        "uuid": "745ecb4b-b224-4d08-a985-e703768d9396"
+    },
+    "layoutState": {
+        "grid": {
+            "lg": [
+                {
+                    "x": 0,
+                    "y": 0,
+                    "w": 3,
+                    "h": 3,
+                    "i": "0"
+                },
+                {
+                    "x": 3,
+                    "y": 0,
+                    "w": 3,
+                    "h": 3,
+                    "i": "1"
+                },
+                {
+                    "x": 0,
+                    "y": 3,
+                    "w": 3,
+                    "h": 3,
+                    "i": "2"
+                },
+                {
+                    "x": 3,
+                    "y": 3,
+                    "w": 3,
+                    "h": 3,
+                    "i": "3"
+                },
+                {
+                    "x": 6,
+                    "y": 0,
+                    "w": 6,
+                    "h": 6,
+                    "i": "4"
+                }
+            ],
+            "md": [
+                {
+                    "x": 0,
+                    "y": 0,
+                    "w": 2,
+                    "h": 2,
+                    "i": "0"
+                },
+                {
+                    "x": 2,
+                    "y": 0,
+                    "w": 2,
+                    "h": 2,
+                    "i": "1"
+                },
+                {
+                    "x": 0,
+                    "y": 2,
+                    "w": 2,
+                    "h": 2,
+                    "i": "2"
+                },
+                {
+                    "x": 2,
+                    "y": 2,
+                    "w": 2,
+                    "h": 2,
+                    "i": "3"
+                },
+                {
+                    "x": 4,
+                    "y": 0,
+                    "w": 4,
+                    "h": 4,
+                    "i": "4"
+                }
+            ],
+            "xs": [
+                {
+                    "x": 0,
+                    "y": 0,
+                    "w": 2,
+                    "h": 2,
+                    "i": "0"
+                },
+                {
+                    "x": 2,
+                    "y": 0,
+                    "w": 2,
+                    "h": 2,
+                    "i": "1"
+                },
+                {
+                    "x": 0,
+                    "y": 2,
+                    "w": 2,
+                    "h": 2,
+                    "i": "2"
+                },
+                {
+                    "x": 2,
+                    "y": 2,
+                    "w": 2,
+                    "h": 2,
+                    "i": "3"
+                },
+                {
+                    "x": 0,
+                    "y": 4,
+                    "w": 4,
+                    "h": 4,
+                    "i": "4"
+                }
+            ]
+        },
+        "component": [
+            {
+                "type": "cmap",
+                "i": "0"
+            },
+            {
+                "type": "cmap",
+                "i": "10"
+            },
+            {
+                "type": "cmap",
+                "i": "30"
+            },
+            {
+                "type": "cmap",
+                "i": "99"
+            },
+            {
+                "type": "embed",
+                "embed_type": "umap",
+                "meta_type": "label",
+                "i": "4"
+            }
+        ]
+    }
+}
