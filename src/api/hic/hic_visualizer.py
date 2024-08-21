@@ -5,8 +5,9 @@ import numpy as np
 import logging
 import concurrent.futures
 import json
-
+import uuid
 from .utils import parse_region, is_valid_region_string, fetch, fetch_group_id_by_name, fetch_group
+from ..models import Session 
 logger = logging.getLogger('django')
 
 DATA_DIR = Path(__file__).resolve().parent
@@ -253,3 +254,30 @@ def hic_get_session_json(file_path: str):
         data = json.load(json_file)
     
     return data
+
+def hic_upload_session_json(data, file_name):
+    # Ensure the file name ends with .json
+    if not file_name.lower().endswith('.json'):
+        file_name += '.json'
+    
+    new_uuid = str(uuid.uuid4())
+    # Update the heatMapState UUID in the data
+    if "heatMapState" in data and isinstance(data["heatMapState"], dict):
+        data["heatMapState"]["uuid"] = new_uuid
+
+    # Define the file path where the session data will be saved
+    session_file_path = os.path.join(DATA_DIR, "session", file_name)
+
+    # Save the JSON data to a file
+    with open(session_file_path, 'w') as json_file:
+        json.dump(data, json_file, indent=4)  # Use indent=4 for pretty printing
+    
+   # Create a new session record in the database
+    session = Session(
+        uuid=new_uuid,
+        name=file_name[:-5],  # You may want to adjust this to a more user-friendly name if necessary
+        file_path=file_name
+    )
+    session.save()
+
+    return str(new_uuid)
