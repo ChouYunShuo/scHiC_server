@@ -1,29 +1,27 @@
-# A Django server to host single cell HiC data.
+# Django Server for Hosting Single-Cell HiC Data
 
 ## Features
 
-- Upload data as single cell hdf5 format
-- Currently support hdf5 transformation from .hic datasets
+- Upload data in single-cell HDF5 format
+- Supports HDF5 transformation from .hic datasets
 - View data as interactive plots and matrices
 - Search for specific genomic regions
-- Containerized using docker compose for fast deployment
+- Containerized with Docker Compose for easy deployment
 
 ## Prerequisites
+- Docker `>=19.03.13` (tested on 19.03.13, 26.1.0)
+- Docker-compose `>=v2.29.2` (tested on v2.29.2, v1.26.0)
 
-- Python 3.10.0
-- Django 3.2
-- h5py 3.6.0
-- Numpy 1.23.4
+## Running the Data Server Locally
 
 ## Installation
 
 #### 1. Clone the repository
 
 ```
-git clone https://github.com/ChouYunShuo/scHiC_server.git
+git clone https://github.com/ChouYunShuo/scHiC_server
 ```
 
-Newest development is on the _Development_ branch.
 
 #### 2. Change into the project directory
 
@@ -31,45 +29,42 @@ Newest development is on the _Development_ branch.
 cd scHiC_server
 ```
 
-#### 3. Create a virtual environment and activate it or use conda
+#### 3. Create a Docker Network
+
+```bash
+docker network create cellscope_network
 
 ```
-python3 -m venv env
-source env/bin/activate
-```
 
-#### 4. Install the required packages
-
+### 4. Run the Data server Using Docker Compose
 ```
-pip install -r requirements.txt
+docker-compose up --build 
 ```
 
 ## Usage
 
-#### 1.Place your h5, .hic files under the hic_data respository
+#### 1. Place Your H5 Files in the hic_data Folder
 
+```bash
+cp <your-data-path> ./hic_data
 ```
-mkdir hic_data
+ 
+#### 2. Create the Corresponding Dataset and Session in Django Admin
+1. Open your web browser and navigate to the Django Admin interface:
+```bash
+http://127.0.0.1:8020/admin/
 ```
+(Replace the URL and port with your data server URL and port if they are different.)
 
-#### 2.Create a .env file to store environment variables
+2. **Add a Session**:
+- In the **Sessions** section, add a new session.
+- For the `filepath`, enter the session filename (e.g., `Ramani_et_al.json`).
 
-```
-cd src
-vim .env
-```
-
-Note that PostgreSQL needs to be installed and configured and set the database related environment variables in .env
-
-_Or you can use the docker-compose to start a PostgreSQL instance with docker_
-
-#### 3. Start the Django development server
-
-```
-python manage.py runserver
-```
-
-The default port is 8000
+3. **Add a Dataset**:
+- In the **Datasets** section, add a new dataset.
+- For the `filepath`, enter the dataset filename (e.g., `Ramani_et_al.h5`).
+- For `resolutions`, enter a single resolution (e.g., `500000`).
+- Copy the corresponding `session_uuid` and paste it into the `Session_uuid` field.
 
 ## License
 
